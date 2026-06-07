@@ -1,0 +1,1 @@
+ALTER TABLE heartbeats ADD COLUMN body TEXT;

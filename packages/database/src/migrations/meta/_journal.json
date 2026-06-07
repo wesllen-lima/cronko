@@ -1,0 +1,48 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1780689234281,
+      "tag": "0000_foamy_sage",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1780693458874,
+      "tag": "0001_busy_captain_britain",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1780694544190,
+      "tag": "0002_silky_the_captain",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1781000000000,
+      "tag": "0003_add_display_order",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1781210000000,
+      "tag": "0004_add_max_duration_ms",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1781210001000,
+      "tag": "0005_add_body_column",
+      "breakpoints": true
+    }
+  ]
+}

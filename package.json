@@ -1,0 +1,24 @@
+{
+  "name": "cronko",
+  "private": true,
+  "packageManager": "pnpm@9.15.9",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "db:generate": "cd packages/database && drizzle-kit generate",
+    "db:migrate": "cd packages/database && drizzle-kit migrate",
+    "db:studio": "cd packages/database && drizzle-kit studio"
+  },
+  "pnpm": {
+    "allowedDeprecatedVersions": {
+      "@esbuild-kit/core-utils": "*",
+      "@esbuild-kit/esm-loader": "*",
+      "prebuild-install": "*"
+    }
+  },
+  "devDependencies": {
+    "turbo": "^2"
+  }
+}
