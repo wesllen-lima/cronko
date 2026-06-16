@@ -85,12 +85,12 @@ export function groupHeartbeatsByDay(
 
   for (let i = days - 1; i >= 0; i--) {
     const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i)
-    const key = date.toISOString().split("T")[0]!
+    const key = date.toISOString().split("T")[0] ?? date.toISOString().slice(0, 10)
     map.set(key, [])
   }
 
   for (const hb of heartbeats) {
-    const key = hb.receivedAt.toISOString().split("T")[0]!
+    const key = hb.receivedAt.toISOString().split("T")[0] ?? hb.receivedAt.toISOString().slice(0, 10)
     const existing = map.get(key)
     if (existing) {
       existing.push(hb)

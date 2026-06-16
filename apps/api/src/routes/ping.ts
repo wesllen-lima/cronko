@@ -26,7 +26,9 @@ async function handlePing(c: Context) {
         body = await c.req.text()
         if (body.length > 10000) body = body.slice(0, 10000)
       }
-    } catch {}
+    } catch {
+      // Body parsing failed — ignore malformed input
+    }
   }
 
   const result = await processHeartbeat(token ?? "", {

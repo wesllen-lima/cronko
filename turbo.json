@@ -10,6 +10,14 @@
       "outputs": [".next/**", "dist/**"]
     },
     "lint": {},
-    "typecheck": {}
+    "typecheck": {},
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    },
+    "test:coverage": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    }
   }
 }

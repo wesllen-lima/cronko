@@ -1,0 +1,14 @@
+pre-commit:
+  parallel: true
+  commands:
+    typecheck:
+      glob: "*.{ts,tsx}"
+      run: pnpm typecheck
+    lint:
+      glob: "*.{ts,tsx,js,jsx}"
+      run: pnpm lint
+
+commit-msg:
+  commands:
+    conventional:
+      run: npx commitlint --edit "$1"

@@ -1,5 +1,5 @@
 import { Hono } from "hono"
-import { getCookie, setCookie, deleteCookie } from "hono/cookie"
+import { setCookie, deleteCookie } from "hono/cookie"
 import { z } from "zod"
 import { zValidator } from "@hono/zod-validator"
 import { findUserByEmail } from "@cronko/database/queries/users"

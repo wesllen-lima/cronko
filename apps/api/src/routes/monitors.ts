@@ -176,7 +176,9 @@ monitorsRoute.post("/reorder", zValidator("json", z.object({ ids: z.array(z.stri
   const { ids } = c.req.valid("json")
   const now = new Date()
   for (let i = 0; i < ids.length; i++) {
-    await db.update(monitorsTable).set({ displayOrder: i, updatedAt: now }).where(eq(monitorsTable.id, ids[i]!))
+      const currentId = ids[i]
+      if (!currentId) continue
+      await db.update(monitorsTable).set({ displayOrder: i, updatedAt: now }).where(eq(monitorsTable.id, currentId))
   }
   return c.json({ data: { ok: true } })
 })

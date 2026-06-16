@@ -9,3 +9,43 @@ data/
 *.tsbuildinfo
 .DS_Store
 agents.md
+SPRINT_ROADMAP.md
+
+# Environment
+.env.*
+!.env.example
+
+# Test coverage
+coverage/
+
+# ESLint cache
+.eslintcache
+
+# Test results (CI)
+test-results.xml
+test-results/
+playwright-report/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+.vscode/settings.json
+
+# SQLite data (alternative location)
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Docker volumes
+postgres_data/
+
+# Misc
+.cache/
+*.tgz

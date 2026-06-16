@@ -24,7 +24,7 @@ const updateSettingsSchema = z.object({
   heartbeatHistoryDays: z.number().int().min(1).max(365).optional(),
 })
 
-export let currentSettings = {
+export const currentSettings = {
   schedulerTickMs: SCHEDULER_TICK_INTERVAL_MS,
   defaultGracePeriodSeconds: DEFAULT_GRACE_PERIOD_SECONDS,
   defaultIntervalSeconds: DEFAULT_EXPECTED_INTERVAL_SECONDS,
