@@ -7,6 +7,7 @@
     "build": "turbo build",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
+    "test": "vitest run",
     "db:generate": "cd packages/database && drizzle-kit generate",
     "db:migrate": "cd packages/database && drizzle-kit migrate",
     "db:studio": "cd packages/database && drizzle-kit studio",
