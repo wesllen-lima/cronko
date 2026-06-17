@@ -1,4 +1,4 @@
-import { eq, desc, lt, gte, lte } from "drizzle-orm"
+import { eq, desc, lt, gte, lte, inArray, sql } from "drizzle-orm"
 import { db } from "../index"
 import { heartbeats } from "../schema"
 
@@ -81,4 +81,30 @@ export async function findLatestOpenPulse(monitorId: string) {
     .orderBy(desc(heartbeats.receivedAt))
     .limit(1)
     .get()
+}
+
+export async function findLatestHeartbeats(
+  monitorIds: string[],
+): Promise<Map<string, { receivedAt: Date; durationMs: number | null }>> {
+  if (monitorIds.length === 0) return new Map()
+
+  const rows = await db
+    .select({
+      monitorId: heartbeats.monitorId,
+      receivedAt: heartbeats.receivedAt,
+      durationMs: heartbeats.durationMs,
+      rn: sql<number>`ROW_NUMBER() OVER (PARTITION BY ${heartbeats.monitorId} ORDER BY ${heartbeats.receivedAt} DESC)`.as("rn"),
+    })
+    .from(heartbeats)
+    .where(inArray(heartbeats.monitorId, monitorIds))
+    .all()
+
+  const map = new Map<string, { receivedAt: Date; durationMs: number | null }>()
+  for (const row of rows) {
+    if ((row as { rn: number }).rn === 1) {
+      map.set(row.monitorId, { receivedAt: row.receivedAt, durationMs: row.durationMs })
+    }
+  }
+
+  return map
 }

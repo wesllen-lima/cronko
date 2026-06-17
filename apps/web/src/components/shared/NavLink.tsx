@@ -22,6 +22,7 @@ export function NavLink({
     <Link
       href={href}
       title={collapsed ? label : undefined}
+      aria-current={isActive ? "page" : undefined}
       className={`relative flex items-center gap-2.5 mx-1.5 px-3 py-2 text-[13px] rounded-md transition-colors ${
         collapsed ? "justify-center" : ""
       } ${

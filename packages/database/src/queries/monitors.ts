@@ -3,7 +3,24 @@ import { db } from "../index"
 import { monitors } from "../schema"
 
 export async function findAllMonitors() {
-  return db.select().from(monitors).orderBy(asc(monitors.displayOrder)).all()
+  return db
+    .select({
+      id: monitors.id,
+      name: monitors.name,
+      slug: monitors.slug,
+      token: monitors.token,
+      status: monitors.status,
+      expectedIntervalSeconds: monitors.expectedIntervalSeconds,
+      gracePeriodSeconds: monitors.gracePeriodSeconds,
+      paused: monitors.paused,
+      maxDurationMs: monitors.maxDurationMs,
+      displayOrder: monitors.displayOrder,
+      createdAt: monitors.createdAt,
+      updatedAt: monitors.updatedAt,
+    })
+    .from(monitors)
+    .orderBy(asc(monitors.displayOrder))
+    .all()
 }
 
 export async function findMonitorById(id: string) {

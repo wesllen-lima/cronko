@@ -14,6 +14,7 @@ export const metadata: Metadata = {
     shortcut: "/icon.svg",
     apple: "/icon.svg",
   },
+  manifest: "/manifest.json",
 }
 
 export default function RootLayout({
@@ -23,6 +24,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" className="dark" suppressHydrationWarning>
+      <head>
+        <meta name="color-scheme" content="dark light" />
+        <meta name="theme-color" content="#10b981" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)" />
+      </head>
       <body className="bg-[#f6f8fa] text-[#1a1f36] dark:bg-zinc-950 dark:text-zinc-100 font-sans antialiased transition-colors">
         <Providers>
           <I18nProvider>{children}</I18nProvider>

@@ -9,17 +9,6 @@ import { startScheduler, stopScheduler, schedulerMetrics } from "./services/sche
 import { app } from "./app"
 import { logger } from "./lib/logger"
 
-if (env.AUTO_MIGRATE === "true") {
-  if (env.DATABASE_URL.startsWith("file:")) {
-    migrate(db, { migrationsFolder: "../../packages/database/src/migrations" })
-    logger.info("SQLite migrations applied")
-  } else {
-    const { migrate: migratePg } = await import("drizzle-orm/postgres-js/migrator")
-    await migratePg(db, { migrationsFolder: "../../packages/database/src/migrations" })
-    logger.info("PostgreSQL migrations applied")
-  }
-}
-
 async function seedAdmin() {
   if (!env.ADMIN_EMAIL || !env.ADMIN_PASSWORD) return
 
@@ -31,7 +20,18 @@ async function seedAdmin() {
   logger.info({ email: env.ADMIN_EMAIL }, "admin user created")
 }
 
-seedAdmin().then(() => {
+seedAdmin().then(async () => {
+  if (env.AUTO_MIGRATE === "true") {
+    if (env.DATABASE_URL.startsWith("file:")) {
+      migrate(db, { migrationsFolder: "../../packages/database/src/migrations" })
+      logger.info("SQLite migrations applied")
+    } else {
+      const { migrate: migratePg } = await import("drizzle-orm/postgres-js/migrator")
+      await migratePg(db, { migrationsFolder: "../../packages/database/src/migrations" })
+      logger.info("PostgreSQL migrations applied")
+    }
+  }
+
   // Health endpoints
   app.get("/health", (c) =>
     c.json({ ok: true, uptime: process.uptime() }),

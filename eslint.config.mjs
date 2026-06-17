@@ -23,6 +23,7 @@ export default tseslint.config(
       "**/vitest.config.ts",
       "**/vitest.workspace.ts",
       "**/drizzle.config.ts",
+      "**/public/sw.js",
     ],
   },
 

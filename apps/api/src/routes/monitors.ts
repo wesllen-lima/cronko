@@ -15,10 +15,11 @@ import {
   pauseMonitor,
   resumeMonitor,
 } from "@cronko/database/queries/monitors"
-import { findHeartbeatsByMonitor, findLatestHeartbeat } from "@cronko/database/queries/heartbeats"
+import { findHeartbeatsByMonitor, findLatestHeartbeats } from "@cronko/database/queries/heartbeats"
 import { findOpenIncident } from "@cronko/database/queries/incidents"
 import { DEFAULT_GRACE_PERIOD_SECONDS } from "@cronko/shared/constants"
 import { logAuditEvent } from "../services/audit"
+import { cacheOrFetch, invalidateCache } from "../lib/cache"
 
 type MonitorRow = InferSelectModel<typeof monitorsTable>
 
@@ -48,22 +49,23 @@ const updateMonitorSchema = z.object({
 })
 
 monitorsRoute.get("/", async (c) => {
-  const monitors = await findAllMonitors()
+  const monitors = await cacheOrFetch("monitors:all", 30_000, () => findAllMonitors())
 
-  const monitorsWithHeartbeat = await Promise.all(
-    monitors.map(async (m: MonitorRow) => {
-      const latestHeartbeat = await findLatestHeartbeat(m.id)
-      return {
-        ...m,
-        latestHeartbeat: latestHeartbeat
-          ? {
-              receivedAt: latestHeartbeat.receivedAt.toISOString(),
-              durationMs: latestHeartbeat.durationMs,
-            }
-          : null,
-      }
-    }),
-  )
+  const ids = monitors.map((m: MonitorRow) => m.id)
+  const heartbeats = await findLatestHeartbeats(ids)
+
+  const monitorsWithHeartbeat = monitors.map((m: MonitorRow) => {
+    const hb = heartbeats.get(m.id)
+    return {
+      ...m,
+      latestHeartbeat: hb
+        ? {
+            receivedAt: hb.receivedAt.toISOString(),
+            durationMs: hb.durationMs,
+          }
+        : null,
+    }
+  })
 
   return c.json({ data: monitorsWithHeartbeat })
 })
@@ -86,8 +88,9 @@ monitorsRoute.post("/", zValidator("json", createMonitorSchema), async (c) => {
     )
   }
 
-  const now = new Date()
-  const monitor = await createMonitor({
+    const now = new Date()
+    invalidateCache("monitors:all").catch(() => {})
+    const monitor = await createMonitor({
     id: crypto.randomUUID(),
     name: body.name,
     slug,
@@ -159,6 +162,8 @@ monitorsRoute.patch(
 
 monitorsRoute.delete("/:id", async (c) => {
   const { id } = pathParamSchema.parse({ id: c.req.param("id") })
+  invalidateCache("monitors:all").catch(() => {})
+  invalidateCache(`monitors:${id}`).catch(() => {})
   await deleteMonitor(id)
   logAuditEvent({
     userId: (c.get("jwtPayload") as { sub: string })?.sub,

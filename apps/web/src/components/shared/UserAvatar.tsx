@@ -2,23 +2,24 @@
 
 import { useState, useEffect } from "react"
 import { useT } from "@/lib/i18n"
+import { api } from "@/lib/api"
 
-function decodeEmail(): string | null {
+async function fetchEmail(): Promise<string | null> {
   try {
-    const Cookies = require("js-cookie")
-    const token = Cookies.default?.get("cronko_token")
-    if (!token) return null
-    const payload = JSON.parse(atob(token.split(".")[1]!))
-    return payload?.email ?? null
+    const data = await api.auth.me()
+    return data.email
   } catch {
     return null
   }
 }
 
 function getInitials(email: string): string {
-  const parts = email.split("@")[0]!.split(/[._-]/)
-  if (parts.length >= 2) {
-    return (parts[0]![0]! + parts[1]![0]!).toUpperCase()
+  const namePart = email.split("@")[0] ?? email
+  const parts = namePart.split(/[._-]/)
+  const first = parts[0]?.[0]
+  const second = parts[1]?.[0]
+  if (first && second) {
+    return (first + second).toUpperCase()
   }
   return email.slice(0, 2).toUpperCase()
 }
@@ -43,14 +44,14 @@ export function UserAvatar({
   const [email, setEmail] = useState<string | null>(null)
 
   useEffect(() => {
-    setEmail(decodeEmail())
+    fetchEmail().then(setEmail)
   }, [])
 
   const initials = email ? getInitials(email) : "?"
   const colorIndex = email
     ? email.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % colors.length
     : 0
-  const color = colors[colorIndex]!
+  const color = colors[colorIndex] ?? colors[0]
 
   if (compact || collapsed) {
     return (

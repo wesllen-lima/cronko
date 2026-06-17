@@ -48,9 +48,11 @@ export function StatusBadge({ status, label, tooltip }: { status: MonitorStatus;
   return (
     <Tooltip content={tooltip ?? v.tooltip}>
       <span
+        role="status"
+        aria-label={`Status: ${label ?? v.label}`}
         className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${v.bg} ${v.text} cursor-default ${status === "down" ? "animate-shake" : ""}`}
       >
-        <span className={`h-2 w-2 rounded-full ${v.dot} ${status === "healthy" ? "animate-pulse" : "animate-none"}`} />
+        <span aria-hidden="true" className={`h-2 w-2 rounded-full ${v.dot} ${status === "healthy" ? "animate-pulse" : "animate-none"}`} />
         {label ?? v.label}
       </span>
     </Tooltip>

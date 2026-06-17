@@ -119,10 +119,19 @@ app.get("/badge/:token", async (c) => {
   <text x="90" y="14" text-anchor="middle" fill="#fff" font-size="10" font-family="sans-serif">${label}</text>
 </svg>`
 
-  return c.text(svg, 200, { "Content-Type": "image/svg+xml", "Cache-Control": "no-cache" })
+  return c.text(svg, 200, { "Content-Type": "image/svg+xml", "Cache-Control": "public, max-age=30" })
 })
 
 const api = new Hono<{ Variables: Variables }>()
+
+// Cache-Control for authenticated GET responses
+api.use("*", async (c, next) => {
+  await next()
+  if (c.req.method === "GET") {
+    c.res.headers.set("Cache-Control", "private, max-age=5")
+  }
+})
+
 api.use("*", authenticate)
 api.use("*", csrf)
 api.route("/monitors", monitorsRoute)

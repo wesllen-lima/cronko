@@ -15,21 +15,17 @@ const I18nContext = createContext<I18nContextValue>({
   t: (key: string) => key,
 })
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useT() {
   return useContext(I18nContext)
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>("pt-BR")
-  const [loaded, setLoaded] = useState(false)
-
-  useEffect(() => {
+  const [locale, setLocaleState] = useState<Locale>(() => {
+    if (typeof window === "undefined") return "pt-BR"
     const stored = localStorage.getItem("cronko_locale") as Locale | null
-    if (stored === "pt-BR" || stored === "en-US") {
-      setLocaleState(stored)
-    }
-    setLoaded(true)
-  }, [])
+    return stored === "pt-BR" || stored === "en-US" ? stored : "pt-BR"
+  })
 
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next)
@@ -41,7 +37,9 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     [locale],
   )
 
-  if (!loaded) return null
+  useEffect(() => {
+    document.documentElement.lang = locale === "en-US" ? "en" : "pt-BR"
+  }, [locale])
 
   return (
     <I18nContext.Provider value={{ locale, setLocale, t: translate }}>
