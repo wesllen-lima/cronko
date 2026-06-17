@@ -42,7 +42,6 @@ pnpm-debug.log*
 *.db-journal
 *.db-wal
 *.db-shm
-packages/database/src/migrations/
 
 # Docker volumes
 postgres_data/
