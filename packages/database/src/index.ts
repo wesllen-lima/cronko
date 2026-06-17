@@ -10,9 +10,9 @@ if (!url) {
   throw new Error("DATABASE_URL environment variable is required")
 }
 
-// TODO(Sprint 5): Replace `any` with proper union type when Drizzle ORM supports
-// conditional typing for SQLite | Postgres without signature incompatibility.
-// See https://github.com/drizzle-team/drizzle-orm/issues/xxxx
+// SQLite and Postgres drizzle instances have incompatible signatures.
+// Using a union type here would break all query files — `any` is
+// intentional until Drizzle adds a shared interface.
 export const db: any = url.startsWith("file:")
   ? drizzle(new Database(url.replace("file:", "")), { schema })
   : drizzlePg(postgres(url), { schema })

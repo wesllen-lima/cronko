@@ -9,8 +9,15 @@ import { startScheduler, stopScheduler, schedulerMetrics } from "./services/sche
 import { app } from "./app"
 import { logger } from "./lib/logger"
 
-if (env.DATABASE_URL.startsWith("file:")) {
-  migrate(db, { migrationsFolder: "../../packages/database/src/migrations" })
+if (env.AUTO_MIGRATE === "true") {
+  if (env.DATABASE_URL.startsWith("file:")) {
+    migrate(db, { migrationsFolder: "../../packages/database/src/migrations" })
+    logger.info("SQLite migrations applied")
+  } else {
+    const { migrate: migratePg } = await import("drizzle-orm/postgres-js/migrator")
+    await migratePg(db, { migrationsFolder: "../../packages/database/src/migrations" })
+    logger.info("PostgreSQL migrations applied")
+  }
 }
 
 async function seedAdmin() {

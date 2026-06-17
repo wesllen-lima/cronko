@@ -1,0 +1,266 @@
+import { Scalar } from "@scalar/hono-api-reference";
+
+const spec = {
+  openapi: "3.1.0",
+  info: {
+    title: "Cronko",
+    version: "1.0.0",
+    description: "Heartbeat monitoring for cron jobs, scripts, and ETLs.",
+  },
+  servers: [{ url: "http://localhost:3001", description: "Local development" }],
+  paths: {
+    "/health": {
+      get: {
+        summary: "Health check with uptime",
+        responses: { "200": { description: "ok", content: { "application/json": { schema: { type: "object", properties: { ok: { type: "boolean" }, uptime: { type: "number" } } } } } } },
+      },
+    },
+    "/health/live": {
+      get: {
+        summary: "Liveness probe",
+        responses: { "200": { description: "alive" } },
+      },
+    },
+    "/health/ready": {
+      get: {
+        summary: "Readiness probe — database connectivity",
+        responses: { "200": { description: "ready" }, "503": { description: "database down" } },
+      },
+    },
+    "/health/metrics": {
+      get: {
+        summary: "Scheduler metrics",
+        responses: { "200": { description: "uptime, scheduler stats, memory" } },
+      },
+    },
+    "/ping/{token}": {
+      get: {
+        summary: "Send a heartbeat (GET)",
+        parameters: [
+          { name: "token", in: "path", required: true, schema: { type: "string" } },
+          { name: "d", in: "query", schema: { type: "integer", description: "Duration in ms" } },
+          { name: "exit", in: "query", schema: { type: "integer", description: "Exit code" } },
+        ],
+        responses: { "200": { description: "ok" }, "404": { description: "Monitor not found" }, "429": { description: "Rate limited" } },
+      },
+      post: {
+        summary: "Send a heartbeat with body (POST)",
+        parameters: [
+          { name: "token", in: "path", required: true, schema: { type: "string" } },
+        ],
+        requestBody: { content: { "application/json": { schema: { type: "object", properties: { body: { type: "string", maxLength: 10000 }, log: { type: "string" }, text: { type: "string" } } } }, "text/plain": { schema: { type: "string", maxLength: 10000 } } } },
+        responses: { "200": { description: "ok" }, "404": { description: "Monitor not found" }, "413": { description: "Body too large" }, "429": { description: "Rate limited" } },
+      },
+    },
+    "/ping/{token}/start": {
+      post: {
+        summary: "Pulse start — begin a long-running job",
+        parameters: [{ name: "token", in: "path", required: true, schema: { type: "string" } }],
+        responses: { "200": { description: "ok" }, "404": { description: "Monitor not found" } },
+      },
+    },
+    "/ping/{token}/finish": {
+      post: {
+        summary: "Pulse finish — complete a long-running job with duration",
+        parameters: [
+          { name: "token", in: "path", required: true, schema: { type: "string" } },
+          { name: "d", in: "query", schema: { type: "integer", description: "Duration in seconds" } },
+          { name: "exit", in: "query", schema: { type: "integer", description: "Exit code" } },
+        ],
+        responses: { "200": { description: "ok" }, "404": { description: "Monitor not found" } },
+      },
+    },
+    "/badge/{token}": {
+      get: {
+        summary: "Public SVG status badge",
+        parameters: [{ name: "token", in: "path", required: true, schema: { type: "string" } }],
+        responses: { "200": { description: "SVG badge", content: { "image/svg+xml": {} } }, "404": { description: "Monitor not found" } },
+      },
+    },
+    "/auth/login": {
+      post: {
+        summary: "Login with email and password",
+        requestBody: { required: true, content: { "application/json": { schema: { type: "object", required: ["email", "password"], properties: { email: { type: "string", format: "email" }, password: { type: "string", minLength: 1 } } } } } },
+        responses: { "200": { description: "token + email + expiresAt" }, "401": { description: "Invalid credentials" }, "429": { description: "Too many login attempts" } },
+      },
+    },
+    "/auth/refresh": {
+      post: {
+        summary: "Refresh access token using the refresh cookie",
+        responses: { "200": { description: "new access token" }, "401": { description: "Invalid or expired refresh token" } },
+      },
+    },
+    "/auth/logout": {
+      post: {
+        summary: "Logout — clear all auth cookies",
+        security: [{ bearerAuth: [] }],
+        responses: { "200": { description: "ok" } },
+      },
+    },
+    "/auth/me": {
+      get: {
+        summary: "Get current user info",
+        security: [{ bearerAuth: [] }],
+        responses: { "200": { description: "user id and email" }, "401": { description: "Unauthorized" } },
+      },
+    },
+    "/api/monitors": {
+      get: {
+        summary: "List all monitors",
+        security: [{ bearerAuth: [] }, { csrf: [] }],
+        responses: { "200": { description: "Array of monitors with latest heartbeat" } },
+      },
+      post: {
+        summary: "Create a monitor",
+        security: [{ bearerAuth: [] }, { csrf: [] }],
+        requestBody: { required: true, content: { "application/json": { schema: { type: "object", required: ["name", "expectedIntervalSeconds"], properties: { name: { type: "string", minLength: 1, maxLength: 100 }, expectedIntervalSeconds: { type: "integer", minimum: 10, maximum: 31536000 }, gracePeriodSeconds: { type: "integer", default: 120 }, maxDurationMs: { type: "integer" } } } } } },
+        responses: { "201": { description: "Monitor created" }, "409": { description: "Name already exists" } },
+      },
+    },
+    "/api/monitors/{id}": {
+      get: {
+        summary: "Get a single monitor with recent heartbeats",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: { "200": { description: "Monitor details" }, "404": { description: "Not found" } },
+      },
+      patch: {
+        summary: "Update a monitor",
+        security: [{ bearerAuth: [] }, { csrf: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: { "200": { description: "Monitor updated" } },
+      },
+      delete: {
+        summary: "Delete a monitor",
+        security: [{ bearerAuth: [] }, { csrf: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: { "200": { description: "ok" } },
+      },
+    },
+    "/api/monitors/{id}/pause": {
+      post: {
+        summary: "Pause a monitor",
+        security: [{ bearerAuth: [] }, { csrf: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: { "200": { description: "Monitor paused" } },
+      },
+    },
+    "/api/monitors/{id}/resume": {
+      post: {
+        summary: "Resume a monitor",
+        security: [{ bearerAuth: [] }, { csrf: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: { "200": { description: "Monitor resumed" } },
+      },
+    },
+    "/api/monitors/{id}/heartbeats": {
+      get: {
+        summary: "Get heartbeats for a monitor",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string" } },
+          { name: "limit", in: "query", schema: { type: "integer", default: 100, maximum: 500 } },
+          { name: "before", in: "query", schema: { type: "string", description: "Cursor for pagination" } },
+          { name: "format", in: "query", schema: { type: "string", enum: ["csv"] } },
+        ],
+        responses: { "200": { description: "Array of heartbeats or CSV text" } },
+      },
+    },
+    "/api/monitors/reorder": {
+      post: {
+        summary: "Reorder monitors",
+        security: [{ bearerAuth: [] }, { csrf: [] }],
+        requestBody: { required: true, content: { "application/json": { schema: { type: "object", required: ["ids"], properties: { ids: { type: "array", items: { type: "string" } } } } } } },
+        responses: { "200": { description: "ok" } },
+      },
+    },
+    "/api/incidents": {
+      get: {
+        summary: "List incidents",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "status", in: "query", schema: { type: "string", enum: ["open", "resolved"] } },
+          { name: "limit", in: "query", schema: { type: "integer" } },
+          { name: "offset", in: "query", schema: { type: "integer" } },
+        ],
+        responses: { "200": { description: "Array of incidents" } },
+      },
+    },
+    "/api/notifications": {
+      get: {
+        summary: "List notification channels",
+        security: [{ bearerAuth: [] }],
+        responses: { "200": { description: "Array of notification channels" } },
+      },
+      post: {
+        summary: "Create a notification channel",
+        security: [{ bearerAuth: [] }, { csrf: [] }],
+        responses: { "201": { description: "Channel created" } },
+      },
+    },
+    "/api/notifications/{id}": {
+      patch: {
+        summary: "Update a notification channel",
+        security: [{ bearerAuth: [] }, { csrf: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: { "200": { description: "Channel updated" } },
+      },
+      delete: {
+        summary: "Delete a notification channel",
+        security: [{ bearerAuth: [] }, { csrf: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: { "200": { description: "ok" } },
+      },
+    },
+    "/api/notifications/{id}/test": {
+      post: {
+        summary: "Send a test notification",
+        security: [{ bearerAuth: [] }, { csrf: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+        responses: { "200": { description: "ok" } },
+      },
+    },
+    "/api/stats": {
+      get: {
+        summary: "Get dashboard statistics",
+        security: [{ bearerAuth: [] }],
+        responses: { "200": { description: "Stats object" } },
+      },
+    },
+    "/api/settings": {
+      get: {
+        summary: "Get current settings",
+        security: [{ bearerAuth: [] }],
+        responses: { "200": { description: "Settings object" } },
+      },
+      post: {
+        summary: "Update settings",
+        security: [{ bearerAuth: [] }, { csrf: [] }],
+        responses: { "200": { description: "Settings updated" } },
+      },
+    },
+    "/api/audit": {
+      get: {
+        summary: "List audit log entries",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "limit", in: "query", schema: { type: "integer", default: 50, maximum: 200 } },
+          { name: "before", in: "query", schema: { type: "string", description: "Cursor for pagination" } },
+        ],
+        responses: { "200": { description: "Array of audit entries" } },
+      },
+    },
+  },
+};
+
+export function registerOpenApi(app: { get: (path: string, ...args: unknown[]) => void }) {
+  app.get("/openapi.json", (c: { json: (body: unknown) => Response }) => c.json(spec));
+
+  app.get(
+    "/docs",
+    Scalar({
+      spec: { url: "/openapi.json" },
+      pageTitle: "Cronko",
+    }),
+  );
+}

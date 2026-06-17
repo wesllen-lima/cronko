@@ -15,6 +15,7 @@ import { auditRoute } from "./routes/audit"
 import { env } from "./env"
 import { AppError, ErrorCode, errorResponse } from "./lib/errors"
 import { logger } from "./lib/logger"
+import { registerOpenApi } from "./openapi"
 
 type Variables = {
   jwtPayload: { sub: string; email: string }
@@ -132,6 +133,8 @@ api.route("/settings", settingsRoute)
 api.route("/audit", auditRoute)
 
 app.route("/api", api)
+
+registerOpenApi(app)
 
 export { app }
 export type AppType = typeof app

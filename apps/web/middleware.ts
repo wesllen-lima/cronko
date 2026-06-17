@@ -4,14 +4,7 @@ import type { NextRequest } from "next/server"
 export default function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const token = request.cookies.get("cronko_token")?.value
-
-  let authenticated = false
-  if (token) {
-    try {
-      const payload = JSON.parse(atob(token.split(".")[1] ?? "")) as { exp?: number }
-      authenticated = !payload.exp || Date.now() < payload.exp * 1000
-    } catch {}
-  }
+  const authenticated = !!token
 
   if (authenticated && pathname === "/login") {
     return NextResponse.redirect(new URL("/dashboard", request.url))

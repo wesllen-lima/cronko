@@ -16,6 +16,8 @@ services:
       - SMTP_PASS=${SMTP_PASS:-}
       - SMTP_FROM=${SMTP_FROM:-}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - AUTO_MIGRATE=${AUTO_MIGRATE:-true}
     ports:
       - "3001:3001"
     depends_on:

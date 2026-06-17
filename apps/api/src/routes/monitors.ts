@@ -24,6 +24,10 @@ type MonitorRow = InferSelectModel<typeof monitorsTable>
 
 export const monitorsRoute = new Hono()
 
+const pathParamSchema = z.object({
+  id: z.string().min(1),
+})
+
 const createMonitorSchema = z.object({
   name: z.string().min(1).max(100),
   expectedIntervalSeconds: z.number().int().min(10).max(31_536_000),
@@ -106,7 +110,7 @@ monitorsRoute.post("/", zValidator("json", createMonitorSchema), async (c) => {
 })
 
 monitorsRoute.get("/:id", async (c) => {
-  const id = c.req.param("id") ?? ""
+  const { id } = pathParamSchema.parse({ id: c.req.param("id") })
   const monitor = await findMonitorById(id)
 
   if (!monitor) {
@@ -129,7 +133,7 @@ monitorsRoute.patch(
   "/:id",
   zValidator("json", updateMonitorSchema),
   async (c) => {
-    const id = c.req.param("id") ?? ""
+    const { id } = pathParamSchema.parse({ id: c.req.param("id") })
     const body = c.req.valid("json")
     const now = new Date()
 
@@ -154,7 +158,7 @@ monitorsRoute.patch(
 )
 
 monitorsRoute.delete("/:id", async (c) => {
-  const id = c.req.param("id") ?? ""
+  const { id } = pathParamSchema.parse({ id: c.req.param("id") })
   await deleteMonitor(id)
   logAuditEvent({
     userId: (c.get("jwtPayload") as { sub: string })?.sub,
