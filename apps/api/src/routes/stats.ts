@@ -25,24 +25,33 @@ statsRoute.get("/", async (c) => {
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
     const recentHeartbeats = await findHeartbeatsSince(twentyFourHoursAgo)
 
-    const totalHeartbeats = recentHeartbeats.length
+    // Exclude heartbeats from paused monitors
+    const pausedIds = new Set(
+      monitors.filter((m: { status: string }) => m.status === "paused").map((m: { id: string }) => m.id),
+    )
+    const activeHeartbeats = recentHeartbeats.filter(
+      (hb: { monitorId: string }) => !pausedIds.has(hb.monitorId),
+    )
+
+    const totalHeartbeats = activeHeartbeats.length
 
     let uptimeTotal = 0
     let monitorsWithHeartbeats = 0
 
     for (const monitor of monitors) {
-      const monitorHeartbeats = recentHeartbeats.filter(
+      // Skip paused monitors — they are not expected to receive heartbeats
+      if (monitor.status === "paused") continue
+
+      const monitorHeartbeats = activeHeartbeats.filter(
         (hb: { monitorId: string }) => hb.monitorId === monitor.id,
       )
 
-      if (monitorHeartbeats.length > 0) {
-        const uptime = calculateUptime(
-          monitorHeartbeats as unknown as Heartbeat[],
-          { expectedIntervalSeconds: monitor.expectedIntervalSeconds },
-        )
-        uptimeTotal += uptime
-        monitorsWithHeartbeats++
-      }
+      const uptime = calculateUptime(
+        monitorHeartbeats as unknown as Heartbeat[],
+        { expectedIntervalSeconds: monitor.expectedIntervalSeconds },
+      )
+      uptimeTotal += uptime
+      monitorsWithHeartbeats++
     }
 
     const uptimePercent =
@@ -53,7 +62,7 @@ statsRoute.get("/", async (c) => {
     const heartbeatsByHour = Array.from({ length: 24 }, (_, i) => {
       const hourStart = new Date(twentyFourHoursAgo.getTime() + i * 60 * 60 * 1000)
       const hourEnd = new Date(hourStart.getTime() + 60 * 60 * 1000)
-      return recentHeartbeats.filter(
+      return activeHeartbeats.filter(
         (hb: { receivedAt: Date }) =>
           hb.receivedAt >= hourStart && hb.receivedAt < hourEnd,
       ).length

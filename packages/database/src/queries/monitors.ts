@@ -96,7 +96,7 @@ export async function deleteMonitor(id: string) {
 export async function pauseMonitor(id: string) {
   await db
     .update(monitors)
-    .set({ paused: true, updatedAt: new Date() })
+    .set({ paused: true, status: "paused", updatedAt: new Date() })
     .where(eq(monitors.id, id))
 
   return findMonitorById(id)
@@ -105,7 +105,7 @@ export async function pauseMonitor(id: string) {
 export async function resumeMonitor(id: string) {
   await db
     .update(monitors)
-    .set({ paused: false, updatedAt: new Date() })
+    .set({ paused: false, status: "pending", updatedAt: new Date() })
     .where(eq(monitors.id, id))
 
   return findMonitorById(id)

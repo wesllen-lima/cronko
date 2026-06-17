@@ -73,16 +73,6 @@ export async function deleteHeartbeatsOlderThan(cutoff: Date) {
   await db.delete(heartbeats).where(lte(heartbeats.receivedAt, cutoff))
 }
 
-export async function findLatestOpenPulse(monitorId: string) {
-  return db
-    .select()
-    .from(heartbeats)
-    .where(eq(heartbeats.monitorId, monitorId))
-    .orderBy(desc(heartbeats.receivedAt))
-    .limit(1)
-    .get()
-}
-
 export async function findLatestHeartbeats(
   monitorIds: string[],
 ): Promise<Map<string, { receivedAt: Date; durationMs: number | null }>> {

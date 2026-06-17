@@ -11,6 +11,7 @@ import {
   HEARTBEAT_HISTORY_DAYS,
 } from "@cronko/shared/constants"
 import { logAuditEvent } from "../services/audit"
+import { restartScheduler } from "../services/scheduler"
 
 export const settingsRoute = new Hono()
 
@@ -98,10 +99,14 @@ settingsRoute.post(
   zValidator("json", updateSettingsSchema),
   async (c) => {
     const body = c.req.valid("json")
+    let schedulerChanged = false
 
     if (body.instanceName !== undefined) await setSetting("instanceName", body.instanceName)
     if (body.timezone !== undefined) await setSetting("timezone", body.timezone)
-    if (body.schedulerTickMs !== undefined) await setSetting("schedulerTickMs", String(body.schedulerTickMs))
+    if (body.schedulerTickMs !== undefined) {
+      await setSetting("schedulerTickMs", String(body.schedulerTickMs))
+      schedulerChanged = true
+    }
     if (body.defaultGracePeriodSeconds !== undefined) await setSetting("defaultGracePeriodSeconds", String(body.defaultGracePeriodSeconds))
     if (body.defaultIntervalSeconds !== undefined) await setSetting("defaultIntervalSeconds", String(body.defaultIntervalSeconds))
     if (body.pingRateLimitPerMinute !== undefined) await setSetting("pingRateLimitPerMinute", String(body.pingRateLimitPerMinute))
@@ -109,6 +114,10 @@ settingsRoute.post(
     if (body.heartbeatHistoryDays !== undefined) await setSetting("heartbeatHistoryDays", String(body.heartbeatHistoryDays))
 
     const data = await loadSettings()
+
+    if (schedulerChanged) {
+      restartScheduler()
+    }
 
     logAuditEvent({
       userId: (c.get("jwtPayload") as { sub: string })?.sub,

@@ -56,7 +56,7 @@ function LogoutButton() {
   const router = useRouter()
   return (
     <button
-      onClick={async () => { try { await api.auth.logout() } catch {}; router.push("/login") }}
+      onClick={async () => { try { await api.auth.logout() } catch { /* logout best-effort */ } router.push("/login") }}
       className="flex items-center justify-center h-8 w-8 rounded-lg text-[#697386] dark:text-zinc-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all duration-200"
       title={t("nav.logout")}
       aria-label={t("nav.logout")}

@@ -1,8 +1,5 @@
 import { Hono } from "hono"
-import {
-  findIncidents,
-  findIncidentsByMonitor,
-} from "@cronko/database/queries/incidents"
+import { findIncidents } from "@cronko/database/queries/incidents"
 
 export const incidentsRoute = new Hono()
 
@@ -22,20 +19,5 @@ incidentsRoute.get("/", async (c) => {
     offset,
     ...(status !== undefined && { status }),
   })
-  return c.json({ data: result })
-})
-
-incidentsRoute.get("/:monitorId/incidents", async (c) => {
-  const monitorId = c.req.param("monitorId") ?? ""
-  const limit = Math.min(
-    Math.max(1, parseInt(c.req.query("limit") ?? "50", 10) || 50),
-    200,
-  )
-  const offset = Math.max(
-    0,
-    parseInt(c.req.query("offset") ?? "0", 10) || 0,
-  )
-
-  const result = await findIncidentsByMonitor(monitorId, { limit, offset })
   return c.json({ data: result })
 })

@@ -52,11 +52,14 @@ async function handlePing(c: Context) {
     }
   }
 
+  const parsedDurationMs = durationMs !== undefined ? parseInt(durationMs, 10) : undefined
+  const parsedExitCode = exitCode !== undefined ? parseInt(exitCode, 10) : undefined
+
   const result = await processHeartbeat(token ?? "", {
     ...(sourceIp !== undefined && { sourceIp }),
     ...(userAgent !== undefined && { userAgent }),
-    ...(durationMs !== undefined && { durationMs: parseInt(durationMs, 10) }),
-    ...(exitCode !== undefined && { exitCode: parseInt(exitCode, 10) }),
+    ...(parsedDurationMs !== undefined && !isNaN(parsedDurationMs) && { durationMs: parsedDurationMs }),
+    ...(parsedExitCode !== undefined && !isNaN(parsedExitCode) && { exitCode: parsedExitCode }),
     ...(body !== undefined && { body }),
   })
 
@@ -98,11 +101,14 @@ async function handlePulseFinish(c: Context) {
   const sourceIp = c.req.header("x-forwarded-for") ?? "127.0.0.1"
   const userAgent = c.req.header("user-agent")
 
+  const parsedDurationMs = durationMs !== undefined ? parseInt(durationMs, 10) : undefined
+  const parsedExitCode = exitCode !== undefined ? parseInt(exitCode, 10) : undefined
+
   const result = await processHeartbeat(token ?? "", {
     sourceIp,
     ...(userAgent !== undefined && { userAgent }),
-    ...(durationMs !== undefined && { durationMs: parseInt(durationMs, 10) }),
-    ...(exitCode !== undefined && { exitCode: parseInt(exitCode, 10) }),
+    ...(parsedDurationMs !== undefined && !isNaN(parsedDurationMs) && { durationMs: parsedDurationMs }),
+    ...(parsedExitCode !== undefined && !isNaN(parsedExitCode) && { exitCode: parsedExitCode }),
     pulseType: "finish",
   })
 

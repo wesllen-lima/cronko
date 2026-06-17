@@ -35,7 +35,7 @@ export async function processHeartbeat(
 
   const prevPulse = await findLatestHeartbeat(monitor.id)
 
-  if (options.pulseType === "finish" && options.durationMs) {
+  if (options.pulseType === "finish" && options.durationMs !== undefined && options.durationMs !== null) {
     if (prevPulse && prevPulse.durationMs === null) {
       await updateHeartbeatDuration(prevPulse.id, options.durationMs)
       await createHeartbeat({
@@ -60,7 +60,7 @@ export async function processHeartbeat(
     })
   }
 
-  if (options.durationMs && (monitor as { maxDurationMs?: number }).maxDurationMs) {
+  if (options.durationMs !== undefined && options.durationMs !== null && (monitor as { maxDurationMs?: number }).maxDurationMs) {
     const maxDuration = (monitor as { maxDurationMs: number }).maxDurationMs
     if (options.durationMs > maxDuration && monitor.status !== "down") {
       await createIncident({

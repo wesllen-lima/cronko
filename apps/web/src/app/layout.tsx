@@ -1,7 +1,14 @@
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Providers } from "@/components/shared/Providers"
 import { I18nProvider } from "@/lib/i18n"
 import "./globals.css"
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#10b981" },
+    { media: "(prefers-color-scheme: dark)", color: "#09090b" },
+  ],
+}
 
 export const metadata: Metadata = {
   title: {
@@ -24,11 +31,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" className="dark" suppressHydrationWarning>
-      <head>
-        <meta name="color-scheme" content="dark light" />
-        <meta name="theme-color" content="#10b981" media="(prefers-color-scheme: light)" />
-        <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)" />
-      </head>
       <body className="bg-[#f6f8fa] text-[#1a1f36] dark:bg-zinc-950 dark:text-zinc-100 font-sans antialiased transition-colors">
         <Providers>
           <I18nProvider>{children}</I18nProvider>

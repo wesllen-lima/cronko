@@ -40,19 +40,38 @@ async function handleRefresh(): Promise<boolean> {
   return refreshPromise
 }
 
+function getCsrfToken(): string | undefined {
+  if (typeof document === "undefined") return undefined
+  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/)
+  return match?.[1] ?? undefined
+}
+
 async function authFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const headers: Record<string, string> = {
     ...((init.headers as Record<string, string>) ?? {}),
   }
 
-  try {
-    const { cookies } = await import("next/headers")
-    const cookieStore = await cookies()
-    const token = cookieStore.get("cronko_token")?.value
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`
+  if (typeof window === "undefined") {
+    try {
+      const { cookies } = await import("next/headers")
+      const cookieStore = await cookies()
+      const token = cookieStore.get("cronko_token")?.value
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`
+      }
+    } catch {
+      // cookies() not available in client context
     }
-  } catch {}
+  }
+
+  // Attach CSRF token for mutating requests (client-side)
+  const method = (init.method ?? "GET").toUpperCase()
+  if (method !== "GET" && method !== "HEAD" && method !== "OPTIONS") {
+    const csrfToken = getCsrfToken()
+    if (csrfToken) {
+      headers["x-csrf-token"] = csrfToken
+    }
+  }
 
   let res = await fetch(`${BASE_URL}${path}`, {
     ...init,
@@ -63,14 +82,18 @@ async function authFetch(path: string, init: RequestInit = {}): Promise<Response
   if (res.status === 401 && !path.startsWith("/auth/")) {
     const refreshed = await handleRefresh()
     if (refreshed) {
-      try {
-        const { cookies } = await import("next/headers")
-        const cookieStore = await cookies()
-        const newToken = cookieStore.get("cronko_token")?.value
-        if (newToken) {
-          headers["Authorization"] = `Bearer ${newToken}`
+      if (typeof window === "undefined") {
+        try {
+          const { cookies } = await import("next/headers")
+          const cookieStore = await cookies()
+          const newToken = cookieStore.get("cronko_token")?.value
+          if (newToken) {
+            headers["Authorization"] = `Bearer ${newToken}`
+          }
+        } catch {
+          // cookies() not available in client context
         }
-      } catch {}
+      }
 
       res = await fetch(`${BASE_URL}${path}`, {
         ...init,

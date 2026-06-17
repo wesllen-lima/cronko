@@ -16,7 +16,7 @@ import {
   resumeMonitor,
 } from "@cronko/database/queries/monitors"
 import { findHeartbeatsByMonitor, findLatestHeartbeats } from "@cronko/database/queries/heartbeats"
-import { findOpenIncident } from "@cronko/database/queries/incidents"
+import { findOpenIncident, findIncidentsByMonitor } from "@cronko/database/queries/incidents"
 import { DEFAULT_GRACE_PERIOD_SECONDS } from "@cronko/shared/constants"
 import { logAuditEvent } from "../services/audit"
 import { cacheOrFetch, invalidateCache } from "../lib/cache"
@@ -205,6 +205,21 @@ monitorsRoute.post("/reorder", zValidator("json", z.object({ ids: z.array(z.stri
       await db.update(monitorsTable).set({ displayOrder: i, updatedAt: now }).where(eq(monitorsTable.id, currentId))
   }
   return c.json({ data: { ok: true } })
+})
+
+monitorsRoute.get("/:id/incidents", async (c) => {
+  const id = c.req.param("id") ?? ""
+  const limit = Math.min(
+    Math.max(1, parseInt(c.req.query("limit") ?? "50", 10) || 50),
+    200,
+  )
+  const offset = Math.max(
+    0,
+    parseInt(c.req.query("offset") ?? "0", 10) || 0,
+  )
+
+  const result = await findIncidentsByMonitor(id, { limit, offset })
+  return c.json({ data: result })
 })
 
 monitorsRoute.get("/:id/heartbeats", async (c) => {

@@ -1,7 +1,7 @@
 import type { Context, Next } from "hono";
-import { PING_RATE_LIMIT_PER_MINUTE } from "@cronko/shared/constants";
 import { getRedis } from "../lib/redis";
 import { logger } from "../lib/logger";
+import { currentSettings } from "../routes/settings";
 
 interface RateLimitEntry {
   count: number;
@@ -19,7 +19,7 @@ setInterval(() => {
 }, 60_000).unref();
 
 function getLimit(): number {
-  return PING_RATE_LIMIT_PER_MINUTE;
+  return currentSettings.pingRateLimitPerMinute;
 }
 
 function getWindowMs(): number {

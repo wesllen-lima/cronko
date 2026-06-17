@@ -88,7 +88,7 @@ authRoute.post("/login", zValidator("json", loginSchema), async (c) => {
   setCookie(c, "cronko_token", accessToken, {
     httpOnly: true,
     secure: isProd(),
-    sameSite: "Strict",
+    sameSite: "Lax",
     path: "/",
     maxAge: 15 * 60,
   })
@@ -96,7 +96,7 @@ authRoute.post("/login", zValidator("json", loginSchema), async (c) => {
   setCookie(c, "cronko_refresh", refreshToken, {
     httpOnly: true,
     secure: isProd(),
-    sameSite: "Strict",
+    sameSite: "Lax",
     path: "/",
     maxAge: 7 * 24 * 60 * 60,
   })
@@ -136,9 +136,9 @@ authRoute.post("/refresh", async (c) => {
     setCookie(c, "cronko_token", accessToken, {
       httpOnly: true,
       secure: isProd(),
-      sameSite: "Strict",
-      path: "/",
-      maxAge: 15 * 60,
+    sameSite: "Lax",
+    path: "/",
+    maxAge: 15 * 60,
     })
 
     const now = Math.floor(Date.now() / 1000)
@@ -155,11 +155,11 @@ authRoute.post("/refresh", async (c) => {
     deleteCookie(c, "cronko_refresh", {
       httpOnly: true,
       secure: isProd(),
-      sameSite: "Strict",
-      path: "/",
-    })
-    return c.json(
-      { error: "Refresh token expired or invalid", code: "UNAUTHORIZED" },
+    sameSite: "Lax",
+    path: "/",
+  })
+  return c.json(
+    { error: "Refresh token expired or invalid", code: "UNAUTHORIZED" },
       401,
     )
   }
@@ -169,14 +169,14 @@ authRoute.post("/logout", authenticate, async (c) => {
   deleteCookie(c, "cronko_token", {
     httpOnly: true,
     secure: isProd(),
-    sameSite: "Strict",
+    sameSite: "Lax",
     path: "/",
   })
 
   deleteCookie(c, "cronko_refresh", {
     httpOnly: true,
     secure: isProd(),
-    sameSite: "Strict",
+    sameSite: "Lax",
     path: "/",
   })
 

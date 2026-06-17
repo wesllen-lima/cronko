@@ -3,7 +3,6 @@ import { findLatestHeartbeat, deleteHeartbeatsOlderThan } from "@cronko/database
 import { createIncident, findOpenIncident, resolveIncident } from "@cronko/database/queries/incidents"
 import { sendNotification } from "./notifier"
 import { currentSettings } from "../routes/settings"
-import { HEARTBEAT_HISTORY_DAYS } from "@cronko/shared/constants"
 import { logger } from "../lib/logger"
 
 let intervalId: ReturnType<typeof setInterval> | null = null
@@ -25,9 +24,10 @@ async function cleanupOldHeartbeats() {
   lastCleanupDay = today
 
   try {
-    const cutoff = new Date(Date.now() - HEARTBEAT_HISTORY_DAYS * 24 * 60 * 60 * 1000)
+    const retentionDays = currentSettings.heartbeatHistoryDays
+    const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000)
     await deleteHeartbeatsOlderThan(cutoff)
-    logger.info({ retentionDays: HEARTBEAT_HISTORY_DAYS }, "heartbeat cleanup completed")
+    logger.info({ retentionDays }, "heartbeat cleanup completed")
   } catch (err) {
     logger.error({ err }, "heartbeat cleanup failed")
   }
@@ -103,7 +103,7 @@ async function checkMonitor(monitor: {
     const now = Date.now()
 
     if (now > deadline + monitor.expectedIntervalSeconds * 1000) {
-      if (monitor.status === "healthy" || monitor.status === "missed") {
+      if (monitor.status === "healthy" || monitor.status === "missed" || monitor.status === "pending") {
         await updateMonitorStatus(monitor.id, "down")
         const openIncident = await findOpenIncident(monitor.id)
         if (!openIncident) {

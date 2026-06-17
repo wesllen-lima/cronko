@@ -14,7 +14,6 @@ export function getRedis(): Redis | null {
         const delay = Math.min(times * 200, 2000);
         return delay;
       },
-      lazyConnect: true,
     });
 
     redis.on("error", (err) => {

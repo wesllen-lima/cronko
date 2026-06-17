@@ -14,7 +14,7 @@ export function SidebarLogout({
   const router = useRouter()
 
   async function handleLogout() {
-    try { await api.auth.logout() } catch {}
+    try { await api.auth.logout() } catch { /* logout best-effort */ }
     router.push("/login")
   }
 

@@ -90,7 +90,7 @@ export default tseslint.config(
       "react-hooks/purity": "warn",
       "react-hooks/immutability": "warn",
       "react-hooks/exhaustive-deps": "warn",
-      "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+      "react-refresh/only-export-components": "off",
       // Pre-existing code style issues — warn, fix in later sprints
       "@typescript-eslint/no-non-null-assertion": "warn",
       "@typescript-eslint/no-unused-vars": [
