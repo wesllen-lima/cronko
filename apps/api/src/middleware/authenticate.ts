@@ -1,6 +1,6 @@
 import type { Context, Next } from "hono"
 import { getCookie } from "hono/cookie"
-import { verifyToken } from "../services/auth"
+import { verifyAccessToken } from "../services/auth"
 
 export async function authenticate(c: Context, next: Next) {
   let token: string | undefined
@@ -20,7 +20,7 @@ export async function authenticate(c: Context, next: Next) {
   }
 
   try {
-    const payload = await verifyToken(token)
+    const payload = await verifyAccessToken(token)
     c.set("jwtPayload", payload)
   } catch {
     return c.json(

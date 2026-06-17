@@ -26,7 +26,7 @@ export default tseslint.config(
     ],
   },
 
-  // ── Global TS rules (applied to all TypeScript files) ──
+  // Global TypeScript rules
   {
     files: ["**/*.ts", "**/*.tsx"],
     plugins: {
@@ -52,7 +52,7 @@ export default tseslint.config(
     },
   },
 
-  // ── packages/shared — strictest rules ──
+  // packages/shared — strictest rules
   {
     files: ["packages/shared/**/*.ts"],
     rules: {
@@ -60,7 +60,7 @@ export default tseslint.config(
     },
   },
 
-  // ── packages/database — relaxed for ORM patterns ──
+  // packages/database — relaxed for ORM patterns
   {
     files: ["packages/database/**/*.ts"],
     rules: {
@@ -68,7 +68,7 @@ export default tseslint.config(
     },
   },
 
-  // ── apps/api — Hono middleware patterns ──
+  // apps/api — Hono middleware patterns
   {
     files: ["apps/api/**/*.ts"],
     rules: {
@@ -76,7 +76,7 @@ export default tseslint.config(
     },
   },
 
-  // ── apps/web — React + Next.js rules (warn only — progressive migration) ──
+  // apps/web — React + Next.js rules (warn only — progressive migration)
   {
     files: ["apps/web/**/*.{ts,tsx}"],
     plugins: {

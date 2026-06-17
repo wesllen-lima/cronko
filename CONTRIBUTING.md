@@ -8,7 +8,8 @@ for getting your changes merged.
 1. Fork the repository and clone it locally.
 2. Install dependencies: `pnpm install`
 3. Copy `.env.example` to `.env` — defaults work for development.
-4. Start the dev servers: `pnpm dev`
+4. (Optional) Start Redis for distributed rate limiting: `docker compose -f docker-compose.dev.yml up -d redis`
+5. Start the dev servers: `pnpm dev`
 
 API runs on `:3001`, web on `:3000`.
 
@@ -66,7 +67,7 @@ pnpm test -- --coverage # Run tests with coverage report
 | Workflow | Trigger | Purpose |
 |---|---|---|
 | `ci.yml` | Push/PR to `main` | typecheck → lint → test → build |
-| `security.yml` | Weekly (Mon 9AM UTC) + manual | `pnpm audit` + CodeQL analysis |
+| `security.yml` | Weekly (Mon 9AM UTC) + manual | `pnpm audit` + CodeQL + SBOM |
 | `deploy.yml` | Tag `v*` | Build & push Docker images to GHCR |
 
 ## Project Structure
@@ -79,7 +80,7 @@ cronko/
 ├── packages/
 │   ├── database/     # Drizzle ORM schema, migrations, queries
 │   └── shared/       # Types, constants, utils, i18n
-└── scripts/          # Dev utilities
+├── scripts/          # Dev utilities + backup/restore
 ```
 
 

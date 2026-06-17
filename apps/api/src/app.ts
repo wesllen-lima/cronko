@@ -1,6 +1,9 @@
 import { Hono } from "hono"
 import { cors } from "hono/cors"
 import { authenticate } from "./middleware/authenticate"
+import { securityHeaders } from "./middleware/securityHeaders"
+import { csrf } from "./middleware/csrf"
+import { requestLogger } from "./middleware/requestLogger"
 import { pingRoute } from "./routes/ping"
 import { authRoute } from "./routes/auth"
 import { monitorsRoute } from "./routes/monitors"
@@ -8,23 +11,73 @@ import { incidentsRoute } from "./routes/incidents"
 import { notificationsRoute } from "./routes/notifications"
 import { statsRoute } from "./routes/stats"
 import { settingsRoute } from "./routes/settings"
+import { auditRoute } from "./routes/audit"
+import { env } from "./env"
+import { AppError, ErrorCode, errorResponse } from "./lib/errors"
+import { logger } from "./lib/logger"
 
-const app = new Hono()
+type Variables = {
+  jwtPayload: { sub: string; email: string }
+  requestId: string
+}
+
+const app = new Hono<{ Variables: Variables }>()
+
+// Request ID middleware — generates unique ID for every request
+app.use("*", requestLogger)
+
+app.use("*", async (c, next) => {
+  const requestId = crypto.randomUUID()
+  c.set("requestId", requestId)
+  c.res.headers.set("X-Request-Id", requestId)
+  await next()
+})
+
+app.use("*", securityHeaders)
+
+const corsOrigins: string[] = ["http://localhost:3000"]
+
+if (env.NEXT_PUBLIC_API_URL) {
+  corsOrigins.push(env.NEXT_PUBLIC_API_URL)
+}
+
+if (env.CORS_ORIGINS) {
+  const extra = env.CORS_ORIGINS.split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+  corsOrigins.push(...extra)
+}
 
 app.use("*", cors({
-  origin: [
-    "http://localhost:3000",
-    process.env.NEXT_PUBLIC_API_URL ?? "",
-  ].filter(Boolean),
+  origin: corsOrigins,
   credentials: true,
   allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
   allowHeaders: ["Content-Type", "Authorization"],
 }))
 
 app.onError((err, c) => {
-  console.error(err)
+  const requestId = c.get("requestId") as string | undefined
+
+  if (err instanceof AppError) {
+    if (env.NODE_ENV === "development") {
+      logger.error({ requestId, code: err.code }, err.message)
+    }
+    return c.json(
+      errorResponse(err.message, err.code, err.status, requestId),
+      err.status as 200,
+    )
+  }
+
+  logger.error({ requestId, err }, "unhandled error")
+
+  const isProd = env.NODE_ENV === "production"
   return c.json(
-    { error: "Internal server error", code: "INTERNAL_ERROR" },
+    errorResponse(
+      isProd ? "Internal server error" : (err as Error).message,
+      ErrorCode.INTERNAL_ERROR,
+      500,
+      requestId,
+    ),
     500,
   )
 })
@@ -68,13 +121,15 @@ app.get("/badge/:token", async (c) => {
   return c.text(svg, 200, { "Content-Type": "image/svg+xml", "Cache-Control": "no-cache" })
 })
 
-const api = new Hono()
+const api = new Hono<{ Variables: Variables }>()
 api.use("*", authenticate)
+api.use("*", csrf)
 api.route("/monitors", monitorsRoute)
 api.route("/incidents", incidentsRoute)
 api.route("/notifications", notificationsRoute)
 api.route("/stats", statsRoute)
 api.route("/settings", settingsRoute)
+api.route("/audit", auditRoute)
 
 app.route("/api", api)
 

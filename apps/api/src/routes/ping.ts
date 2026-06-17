@@ -1,9 +1,20 @@
 import { Hono } from "hono"
 import type { Context } from "hono"
+import sanitizeHtml from "sanitize-html"
 import { rateLimit } from "../middleware/rateLimit"
 import { processHeartbeat } from "../services/heartbeat"
 
 export const pingRoute = new Hono()
+
+const MAX_BODY_LENGTH = 10_000
+
+function sanitizeBody(input: string): string {
+  return sanitizeHtml(input, {
+    allowedTags: [],
+    allowedAttributes: {},
+    disallowedTagsMode: "discard",
+  }).trim()
+}
 
 pingRoute.use("/:token", rateLimit)
 
@@ -18,13 +29,23 @@ async function handlePing(c: Context) {
   if (c.req.method === "POST") {
     try {
       const contentType = c.req.header("content-type") ?? ""
+      let rawBody: string | undefined
+
       if (contentType.includes("application/json")) {
         const json = await c.req.json()
-        body = json.body ?? json.log ?? json.text
-        if (body && body.length > 10000) body = body.slice(0, 10000)
+        rawBody = json.body ?? json.log ?? json.text
       } else if (contentType.includes("text/plain")) {
-        body = await c.req.text()
-        if (body.length > 10000) body = body.slice(0, 10000)
+        rawBody = await c.req.text()
+      }
+
+      if (rawBody !== undefined) {
+        if (rawBody.length > MAX_BODY_LENGTH) {
+          return c.json(
+            { error: "Body too large", code: "PAYLOAD_TOO_LARGE" },
+            413,
+          )
+        }
+        body = sanitizeBody(rawBody)
       }
     } catch {
       // Body parsing failed — ignore malformed input

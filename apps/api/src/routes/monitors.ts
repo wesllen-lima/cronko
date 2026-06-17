@@ -18,6 +18,7 @@ import {
 import { findHeartbeatsByMonitor, findLatestHeartbeat } from "@cronko/database/queries/heartbeats"
 import { findOpenIncident } from "@cronko/database/queries/incidents"
 import { DEFAULT_GRACE_PERIOD_SECONDS } from "@cronko/shared/constants"
+import { logAuditEvent } from "../services/audit"
 
 type MonitorRow = InferSelectModel<typeof monitorsTable>
 
@@ -93,6 +94,14 @@ monitorsRoute.post("/", zValidator("json", createMonitorSchema), async (c) => {
       now,
   })
 
+  logAuditEvent({
+    userId: (c.get("jwtPayload") as { sub: string })?.sub,
+    action: "monitor.created",
+    resourceType: "monitor",
+    resourceId: monitor.id,
+    metadata: { name: body.name },
+  }).catch(() => {})
+
   return c.json({ data: monitor }, 201)
 })
 
@@ -147,6 +156,12 @@ monitorsRoute.patch(
 monitorsRoute.delete("/:id", async (c) => {
   const id = c.req.param("id") ?? ""
   await deleteMonitor(id)
+  logAuditEvent({
+    userId: (c.get("jwtPayload") as { sub: string })?.sub,
+    action: "monitor.deleted",
+    resourceType: "monitor",
+    resourceId: id,
+  }).catch(() => {})
   return c.json({ data: { ok: true } })
 })
 

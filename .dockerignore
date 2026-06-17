@@ -5,6 +5,10 @@ dist
 .env
 .env.local
 data/
+redis_data/
+backups/
+*.sql.gz
+sbom.json
 **/.git
 **/node_modules
 **/.next

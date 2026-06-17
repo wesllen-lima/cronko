@@ -6,7 +6,7 @@ export default defineConfig({
     environment: "node",
     globals: true,
     include: ["src/**/*.test.ts"],
-    setupFiles: [],
+    setupFiles: ["./vitest.setup.js"],
     env: {
       DATABASE_URL: "file:./test.db",
       JWT_SECRET: "test-secret-key-minimum-32-characters-long",

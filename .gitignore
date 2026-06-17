@@ -38,13 +38,22 @@ pnpm-debug.log*
 *~
 .vscode/settings.json
 
-# SQLite data (alternative location)
+# SQLite data
 *.db-journal
 *.db-wal
 *.db-shm
+packages/database/src/migrations/
 
 # Docker volumes
 postgres_data/
+redis_data/
+
+# Backups
+backups/
+*.sql.gz
+
+# SBOM
+sbom.json
 
 # Misc
 .cache/

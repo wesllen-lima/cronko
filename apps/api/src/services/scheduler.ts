@@ -4,12 +4,20 @@ import { createIncident, findOpenIncident, resolveIncident } from "@cronko/datab
 import { sendNotification } from "./notifier"
 import { currentSettings } from "../routes/settings"
 import { HEARTBEAT_HISTORY_DAYS } from "@cronko/shared/constants"
+import { logger } from "../lib/logger"
 
 let intervalId: ReturnType<typeof setInterval> | null = null
 
 let isRunning = false
 
 let lastCleanupDay = 0
+
+export const schedulerMetrics = {
+  lastTickAt: 0,
+  lastTickDurationMs: 0,
+  tickErrors: 0,
+  monitorsChecked: 0,
+}
 
 async function cleanupOldHeartbeats() {
   const today = new Date().getDate()
@@ -19,9 +27,9 @@ async function cleanupOldHeartbeats() {
   try {
     const cutoff = new Date(Date.now() - HEARTBEAT_HISTORY_DAYS * 24 * 60 * 60 * 1000)
     await deleteHeartbeatsOlderThan(cutoff)
-    console.log(`Heartbeat cleanup: deleted records older than ${HEARTBEAT_HISTORY_DAYS} days`)
+    logger.info({ retentionDays: HEARTBEAT_HISTORY_DAYS }, "heartbeat cleanup completed")
   } catch (err) {
-    console.error("Heartbeat cleanup failed:", err)
+    logger.error({ err }, "heartbeat cleanup failed")
   }
 }
 
@@ -53,20 +61,27 @@ async function runTick() {
   if (isRunning) return
   isRunning = true
 
+  const start = Date.now()
+
   try {
     await cleanupOldHeartbeats()
 
     const allMonitors = await findAllMonitors()
     const activeMonitors = allMonitors.filter((m: { paused: boolean }) => !m.paused)
 
+    schedulerMetrics.monitorsChecked = activeMonitors.length
+
     for (const monitor of activeMonitors) {
       try {
         await checkMonitor(monitor)
       } catch (err) {
-        console.error(`Scheduler: error checking monitor ${monitor.name} (${monitor.id})`, err)
+        schedulerMetrics.tickErrors++
+        logger.error({ err, monitorId: monitor.id, monitorName: monitor.name }, "scheduler check failed")
       }
     }
   } finally {
+    schedulerMetrics.lastTickDurationMs = Date.now() - start
+    schedulerMetrics.lastTickAt = Date.now()
     isRunning = false
   }
 }

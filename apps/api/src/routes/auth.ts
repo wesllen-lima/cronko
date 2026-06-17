@@ -1,10 +1,17 @@
 import { Hono } from "hono"
-import { setCookie, deleteCookie } from "hono/cookie"
+import { setCookie, deleteCookie, getCookie } from "hono/cookie"
 import { z } from "zod"
 import { zValidator } from "@hono/zod-validator"
 import { findUserByEmail } from "@cronko/database/queries/users"
-import { verifyPassword, generateToken } from "../services/auth"
+import {
+  verifyPassword,
+  generateAccessToken,
+  generateRefreshToken,
+  verifyRefreshToken,
+} from "../services/auth"
 import { authenticate } from "../middleware/authenticate"
+import { env } from "../env"
+import { logAuditEvent } from "../services/audit"
 
 export const authRoute = new Hono()
 
@@ -34,7 +41,7 @@ function checkLoginRateLimit(ip: string, email: string): boolean {
 }
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  email: z.email(),
   password: z.string().min(1),
 })
 
@@ -53,44 +60,130 @@ authRoute.post("/login", zValidator("json", loginSchema), async (c) => {
   const user = await findUserByEmail(email)
 
   if (!user) {
+    logAuditEvent({
+      action: "login_failure",
+      metadata: { email, reason: "user_not_found" },
+      ipAddress: ip,
+    }).catch(() => {})
     return c.json({ error: "Invalid credentials" }, 401)
   }
 
   const valid = await verifyPassword(password, user.password)
 
   if (!valid) {
+    logAuditEvent({
+      userId: user.id,
+      action: "login_failure",
+      metadata: { email, reason: "invalid_password" },
+      ipAddress: ip,
+    }).catch(() => {})
     return c.json({ error: "Invalid credentials" }, 401)
   }
 
-  const token = await generateToken(user.id, user.email)
+  const accessToken = await generateAccessToken(user.id, user.email)
+  const refreshToken = await generateRefreshToken(user.id, user.email)
 
-  setCookie(c, "cronko_token", token, {
+  const isProd = env.NODE_ENV === "production"
+
+  setCookie(c, "cronko_token", accessToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "Lax",
-    path: "/",
+    secure: isProd,
+    sameSite: "Strict",
+    path: "/api",
+    maxAge: 15 * 60, // 15 minutes
+  })
+
+  setCookie(c, "cronko_refresh", refreshToken, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: "Strict",
+    path: "/api/auth",
     maxAge: 7 * 24 * 60 * 60, // 7 days
   })
 
+  logAuditEvent({
+    userId: user.id,
+    action: "login_success",
+    ipAddress: ip,
+  }).catch(() => {})
+
   const now = Math.floor(Date.now() / 1000)
-  const expiresAt = new Date((now + 7 * 24 * 60 * 60) * 1000).toISOString()
+  const expiresAt = new Date((now + 15 * 60) * 1000).toISOString()
 
   return c.json({
     data: {
-      token,
+      token: accessToken,
       email: user.email,
       expiresAt,
     },
   })
 })
 
+authRoute.post("/refresh", async (c) => {
+  const refreshToken = getCookie(c, "cronko_refresh")
+
+  if (!refreshToken) {
+    return c.json(
+      { error: "No refresh token", code: "UNAUTHORIZED" },
+      401,
+    )
+  }
+
+  try {
+    const payload = await verifyRefreshToken(refreshToken)
+    const accessToken = await generateAccessToken(payload.sub, payload.email)
+
+    const isProd = env.NODE_ENV === "production"
+
+    setCookie(c, "cronko_token", accessToken, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: "Strict",
+      path: "/api",
+      maxAge: 15 * 60,
+    })
+
+    const now = Math.floor(Date.now() / 1000)
+    const expiresAt = new Date((now + 15 * 60) * 1000).toISOString()
+
+    return c.json({
+      data: {
+        token: accessToken,
+        email: payload.email,
+        expiresAt,
+      },
+    })
+  } catch {
+    deleteCookie(c, "cronko_refresh", {
+      httpOnly: true,
+      secure: env.NODE_ENV === "production",
+      sameSite: "Strict",
+      path: "/api/auth",
+    })
+    return c.json(
+      { error: "Refresh token expired or invalid", code: "UNAUTHORIZED" },
+      401,
+    )
+  }
+})
+
 authRoute.post("/logout", authenticate, async (c) => {
+  const isProd = env.NODE_ENV === "production"
+
   deleteCookie(c, "cronko_token", {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "Lax",
-    path: "/",
+    secure: isProd,
+    sameSite: "Strict",
+    path: "/api",
   })
+
+  deleteCookie(c, "cronko_refresh", {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: "Strict",
+    path: "/api/auth",
+  })
+
   return c.json({ data: { ok: true } })
 })
 

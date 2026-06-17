@@ -10,6 +10,7 @@ import {
   MAX_HEARTBEATS_PER_MONITOR,
   HEARTBEAT_HISTORY_DAYS,
 } from "@cronko/shared/constants"
+import { logAuditEvent } from "../services/audit"
 
 export const settingsRoute = new Hono()
 
@@ -108,6 +109,14 @@ settingsRoute.post(
     if (body.heartbeatHistoryDays !== undefined) await setSetting("heartbeatHistoryDays", String(body.heartbeatHistoryDays))
 
     const data = await loadSettings()
+
+    logAuditEvent({
+      userId: (c.get("jwtPayload") as { sub: string })?.sub,
+      action: "settings.updated",
+      resourceType: "settings",
+      metadata: body as Record<string, unknown>,
+    }).catch(() => {})
+
     return c.json({ data })
   },
 )

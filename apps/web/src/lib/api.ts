@@ -11,6 +11,35 @@ export class ApiError extends Error {
   }
 }
 
+let isRefreshing = false
+let refreshPromise: Promise<boolean> | null = null
+
+async function refreshToken(): Promise<boolean> {
+  try {
+    const res = await fetch(`${BASE_URL}/auth/refresh`, {
+      method: "POST",
+      credentials: "include",
+    })
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
+async function handleRefresh(): Promise<boolean> {
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise
+  }
+
+  isRefreshing = true
+  refreshPromise = refreshToken().finally(() => {
+    isRefreshing = false
+    refreshPromise = null
+  })
+
+  return refreshPromise
+}
+
 async function authFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const headers: Record<string, string> = {
     ...((init.headers as Record<string, string>) ?? {}),
@@ -24,11 +53,34 @@ async function authFetch(path: string, init: RequestInit = {}): Promise<Response
       headers["Authorization"] = `Bearer ${token}`
     }
   } catch {}
-  return fetch(`${BASE_URL}${path}`, {
+
+  let res = await fetch(`${BASE_URL}${path}`, {
     ...init,
     credentials: "include",
     headers,
   })
+
+  if (res.status === 401 && !path.startsWith("/auth/")) {
+    const refreshed = await handleRefresh()
+    if (refreshed) {
+      try {
+        const { cookies } = await import("next/headers")
+        const cookieStore = await cookies()
+        const newToken = cookieStore.get("cronko_token")?.value
+        if (newToken) {
+          headers["Authorization"] = `Bearer ${newToken}`
+        }
+      } catch {}
+
+      res = await fetch(`${BASE_URL}${path}`, {
+        ...init,
+        credentials: "include",
+        headers,
+      })
+    }
+  }
+
+  return res
 }
 
 async function get<T>(path: string): Promise<T> {

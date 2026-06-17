@@ -1,6 +1,7 @@
 import * as nodemailer from "nodemailer"
 import { findEnabledNotificationChannels } from "@cronko/database/queries/notifications"
 import { env } from "../env"
+import { logger } from "../lib/logger"
 import type {
   DiscordConfig,
   TelegramConfig,
@@ -69,9 +70,9 @@ async function sendToChannel(
       }
     }
   } catch (err) {
-    console.error(
-      `Notifier: failed to send ${event} via ${channel.type} channel ${channel.name}`,
-      err,
+    logger.error(
+      { err, event, channelType: channel.type, channelName: channel.name },
+      "notification send failed",
     )
   }
 }

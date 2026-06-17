@@ -9,6 +9,7 @@ import {
   deleteNotificationChannel,
 } from "@cronko/database/queries/notifications"
 import { sendNotification } from "../services/notifier"
+import { logAuditEvent } from "../services/audit"
 
 export const notificationsRoute = new Hono()
 
@@ -16,7 +17,7 @@ const createNotificationSchema = z.discriminatedUnion("type", [
   z.object({
     name: z.string().min(1),
     type: z.literal("discord"),
-    config: z.object({ webhookUrl: z.string().url() }),
+    config: z.object({ webhookUrl: z.url() }),
   }),
   z.object({
     name: z.string().min(1),
@@ -26,12 +27,12 @@ const createNotificationSchema = z.discriminatedUnion("type", [
   z.object({
     name: z.string().min(1),
     type: z.literal("email"),
-    config: z.object({ to: z.string().email() }),
+    config: z.object({ to: z.email() }),
   }),
   z.object({
     name: z.string().min(1),
     type: z.literal("slack"),
-    config: z.object({ webhookUrl: z.string().url() }),
+    config: z.object({ webhookUrl: z.url() }),
   }),
 ])
 
@@ -40,9 +41,9 @@ const updateNotificationSchema = z.object({
   enabled: z.boolean().optional(),
   config: z
     .union([
-      z.object({ webhookUrl: z.string().url() }),
+      z.object({ webhookUrl: z.url() }),
       z.object({ botToken: z.string().min(1), chatId: z.string().min(1) }),
-      z.object({ to: z.string().email() }),
+      z.object({ to: z.email() }),
     ])
     .optional(),
 })
@@ -64,6 +65,14 @@ notificationsRoute.post(
       enabled: true,
       config: body.config,
     })
+
+    logAuditEvent({
+      userId: (c.get("jwtPayload") as { sub: string })?.sub,
+      action: "notification.created",
+      resourceType: "notification",
+      resourceId: channel.id,
+      metadata: { name: body.name, type: body.type },
+    }).catch(() => {})
 
     return c.json({ data: channel }, 201)
   },
@@ -93,6 +102,12 @@ notificationsRoute.patch(
 notificationsRoute.delete("/:id", async (c) => {
   const id = c.req.param("id") ?? ""
   await deleteNotificationChannel(id)
+  logAuditEvent({
+    userId: (c.get("jwtPayload") as { sub: string })?.sub,
+    action: "notification.deleted",
+    resourceType: "notification",
+    resourceId: id,
+  }).catch(() => {})
   return c.json({ data: { ok: true } })
 })
 

@@ -97,6 +97,17 @@ export const settings = sqliteTable("settings", {
   value: text("value").notNull(),
 })
 
+export const auditLogs = sqliteTable("audit_logs", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").references(() => users.id),
+  action: text("action").notNull(),
+  resourceType: text("resource_type"),
+  resourceId: text("resource_id"),
+  metadata: text("metadata"),
+  ipAddress: text("ip_address"),
+  createdAt: text("created_at").notNull(),
+})
+
 export const incidentsRelations = relations(incidents, ({ one }) => ({
   monitor: one(monitors, {
     fields: [incidents.monitorId],

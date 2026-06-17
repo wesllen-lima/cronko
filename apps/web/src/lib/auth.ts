@@ -1,19 +1,3 @@
-import Cookies from "js-cookie"
-
-const TOKEN_KEY = "cronko_token"
-
-export function getToken(): string | undefined {
-  return Cookies.get(TOKEN_KEY)
-}
-
-export function setToken(token: string): void {
-  Cookies.set(TOKEN_KEY, token, { expires: 7, path: "/" })
-}
-
-export function clearToken(): void {
-  Cookies.remove(TOKEN_KEY, { path: "/" })
-}
-
-export function isAuthenticated(): boolean {
-  return !!getToken()
-}
+// Authentication state is managed server-side via httpOnly cookies.
+// The middleware.ts reads cronko_token directly from request cookies.
+// Client-side auth helpers are not needed — tokens are not accessible via JS.
