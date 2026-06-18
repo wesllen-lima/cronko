@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { api } from "@/lib/api"
 import { useT } from "@/lib/i18n"
 import { useToast } from "@/components/shared/Toast"
-import { Settings, Zap, Clock, Shield, History, Smile, Trash2, Search, ChevronDown, Sun, Moon, Monitor } from "lucide-react"
+import { Settings, Zap, Clock, Shield, History, Smile, Trash2, Search, ChevronDown } from "lucide-react"
 import { useTheme } from "@/components/shared/ThemeProvider"
 import { ConfirmModal } from "@/components/shared/ConfirmModal"
 import { Toggle } from "@/components/shared/Toggle"
@@ -108,7 +108,10 @@ export default function SettingsPage() {
   const [searchQuery, setSearchQuery] = useState("")
 
   useEffect(() => {
-    api.settings.get().then((data) => { setSettings(data); setEmoji(localStorage.getItem("cronko_favicon") ?? "") }).catch((e) => console.error("Failed to load settings:", e)).finally(() => setLoading(false))
+    api.settings.get().then((data) => { setSettings(data); setEmoji(localStorage.getItem("cronko_favicon") ?? "") }).catch((e) => {
+      // eslint-disable-next-line no-console
+      console.error("Failed to load settings:", e)
+    }).finally(() => setLoading(false))
   }, [])
 
   useEffect(() => {

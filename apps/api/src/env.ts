@@ -27,7 +27,7 @@ const envSchema = z.object({
   REDIS_URL: z.url().optional(),
   AUTO_MIGRATE: z
     .enum(["true", "false"])
-    .default("false"),
+    .default(process.env.NODE_ENV === "production" ? "false" : "true"),
 })
 
 export const env = (() => {

@@ -37,6 +37,13 @@ async function sendToChannel(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: text }),
       })
+    } else if (channel.type === "slack") {
+      const slackCfg = cfg as { webhookUrl: string }
+      await fetch(slackCfg.webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      })
     } else if (channel.type === "telegram") {
       const telegramCfg = cfg as TelegramConfig
       await fetch(

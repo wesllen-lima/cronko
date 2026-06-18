@@ -3,6 +3,7 @@ import { findHeartbeatsSince } from "@cronko/database/queries/heartbeats"
 import { findAllMonitors } from "@cronko/database/queries/monitors"
 import { calculateUptime } from "@cronko/shared/utils"
 import type { Heartbeat } from "@cronko/shared"
+import { logger } from "../lib/logger"
 
 export const statsRoute = new Hono()
 
@@ -80,7 +81,7 @@ statsRoute.get("/", async (c) => {
       },
     })
   } catch (err) {
-    console.error("Stats route error:", err)
+    logger.error({ err }, "stats route error")
     return c.json({ error: "Internal server error", code: "INTERNAL_ERROR" }, 500)
   }
 })

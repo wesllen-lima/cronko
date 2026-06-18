@@ -67,6 +67,7 @@ export default function DashboardPage() {
       setMonitors(m)
     } catch (e) {
       if (!(e instanceof Error && e.message === "API 401")) {
+        // eslint-disable-next-line no-console
         console.error("Failed to load dashboard data:", e)
       }
     } finally {

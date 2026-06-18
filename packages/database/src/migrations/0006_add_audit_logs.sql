@@ -1,6 +1,6 @@
 CREATE TABLE audit_logs (
   id TEXT PRIMARY KEY,
-  user_id TEXT REFERENCES users(id),
+  user_id TEXT,
   action TEXT NOT NULL,
   resource_type TEXT,
   resource_id TEXT,
@@ -8,7 +8,9 @@ CREATE TABLE audit_logs (
   ip_address TEXT,
   created_at TEXT NOT NULL
 );
-
+--> statement-breakpoint
 CREATE INDEX audit_logs_user_id_idx ON audit_logs(user_id);
+--> statement-breakpoint
 CREATE INDEX audit_logs_action_idx ON audit_logs(action);
+--> statement-breakpoint
 CREATE INDEX audit_logs_created_at_idx ON audit_logs(created_at);

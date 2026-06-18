@@ -8,6 +8,20 @@ import { hashPassword } from "./services/auth"
 import { startScheduler, stopScheduler, schedulerMetrics } from "./services/scheduler"
 import { app } from "./app"
 import { logger } from "./lib/logger"
+import { getRedis } from "./lib/redis"
+
+async function applyMigrations() {
+  if (env.AUTO_MIGRATE !== "true") return
+
+  if (env.DATABASE_URL.startsWith("file:")) {
+    migrate(db, { migrationsFolder: "../../packages/database/src/migrations" })
+    logger.info("SQLite migrations applied")
+  } else {
+    const { migrate: migratePg } = await import("drizzle-orm/postgres-js/migrator")
+    await migratePg(db, { migrationsFolder: "../../packages/database/src/migrations" })
+    logger.info("PostgreSQL migrations applied")
+  }
+}
 
 async function seedAdmin() {
   if (!env.ADMIN_EMAIL || !env.ADMIN_PASSWORD) return
@@ -20,32 +34,26 @@ async function seedAdmin() {
   logger.info({ email: env.ADMIN_EMAIL }, "admin user created")
 }
 
-seedAdmin().then(async () => {
-  if (env.AUTO_MIGRATE === "true") {
-    if (env.DATABASE_URL.startsWith("file:")) {
-      migrate(db, { migrationsFolder: "../../packages/database/src/migrations" })
-      logger.info("SQLite migrations applied")
-    } else {
-      const { migrate: migratePg } = await import("drizzle-orm/postgres-js/migrator")
-      await migratePg(db, { migrationsFolder: "../../packages/database/src/migrations" })
-      logger.info("PostgreSQL migrations applied")
-    }
-  }
+async function bootstrap() {
+  // 1. Apply migrations first — tables must exist before any queries
+  await applyMigrations()
+
+  // 2. Seed admin user
+  await seedAdmin()
 
   // Health endpoints
   app.get("/health", (c) =>
     c.json({ ok: true, uptime: process.uptime() }),
   )
 
-  // Liveness probe — verifica se o processo está vivo
+  // Liveness probe
   app.get("/health/live", (c) =>
     c.json({ status: "ok" }),
   )
 
-  // Readiness probe — verifica se pode receber tráfego (DB conectado)
+  // Readiness probe — database connectivity
   app.get("/health/ready", async (c) => {
     try {
-      const { db } = await import("@cronko/database")
       await db.select({ val: sql`1` }).get()
       return c.json({ status: "ok", checks: { database: "up" } })
     } catch (err) {
@@ -67,31 +75,53 @@ seedAdmin().then(async () => {
         tickErrors: schedulerMetrics.tickErrors,
         monitorsChecked: schedulerMetrics.monitorsChecked,
       },
-      memory: process.memoryUsage()
+      memory: process.memoryUsage(),
     }),
   )
 
+  // 3. Start scheduler and HTTP server
   startScheduler()
 
   const server = serve({ fetch: app.fetch, port: env.API_PORT, hostname: env.API_HOST })
 
   let shuttingDown = false
 
-  const shutdown = (signal: string) => {
+  const shutdown = async (signal: string) => {
     if (shuttingDown) return
     shuttingDown = true
     logger.info({ signal }, "shutting down gracefully")
+
     stopScheduler()
+
+    // Close Redis connection gracefully
+    const redis = getRedis()
+    if (redis) {
+      try {
+        await redis.quit()
+        logger.info("redis disconnected")
+      } catch {
+        redis.disconnect()
+      }
+    }
+
+    // Close HTTP server — allow in-flight requests to finish
     server.close(() => {
       logger.info("server closed")
-      process.exit(0)
+      process.exitCode = 0
     })
+
+    // Force shutdown after 30s as safety net
     setTimeout(() => {
       logger.error("forced shutdown after timeout")
-      process.exit(1)
-    }, 10_000)
+      process.exitCode = 1
+    }, 30_000).unref()
   }
 
-  process.on("SIGTERM", () => shutdown("SIGTERM"))
-  process.on("SIGINT", () => shutdown("SIGINT"))
+  process.on("SIGTERM", () => { shutdown("SIGTERM").catch(() => {}) })
+  process.on("SIGINT", () => { shutdown("SIGINT").catch(() => {}) })
+}
+
+bootstrap().catch((err) => {
+  logger.error({ err }, "bootstrap failed")
+  process.exit(1)
 })

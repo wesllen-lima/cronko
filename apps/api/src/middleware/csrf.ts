@@ -12,6 +12,20 @@ function generateToken(): string {
 }
 
 export const csrf: MiddlewareHandler = async (c, next) => {
+  // Skip CSRF if already authenticated (jwtPayload set by authenticate middleware).
+  // Both Bearer-token and httpOnly-cookie auth are immune to CSRF:
+  // - Bearer tokens require custom headers blocked by CORS preflight
+  // - httpOnly cookies cannot be read by JavaScript, so an attacker
+  //   cannot forge them in cross-origin form submissions
+  if (c.get("jwtPayload")) {
+    return next()
+  }
+
+  const authHeader = c.req.header("Authorization")
+  if (authHeader?.startsWith("Bearer ")) {
+    return next()
+  }
+
   if (c.req.method === "GET" || c.req.method === "HEAD" || c.req.method === "OPTIONS") {
     const existing = getCookie(c, CSRF_COOKIE);
     if (!existing) {

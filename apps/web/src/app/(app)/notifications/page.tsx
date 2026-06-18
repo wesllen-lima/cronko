@@ -131,7 +131,10 @@ export default function NotificationsPage() {
   const [testingId, setTestingId] = useState<string | null>(null)
 
   useEffect(() => {
-    api.notifications.list().then(setChannels).catch((e) => console.error("Failed to load notifications:", e)).finally(() => setLoading(false))
+    api.notifications.list().then(setChannels).catch((e) => {
+      // eslint-disable-next-line no-console
+      console.error("Failed to load notifications:", e)
+    }).finally(() => setLoading(false))
   }, [])
 
   const refresh = async () => {

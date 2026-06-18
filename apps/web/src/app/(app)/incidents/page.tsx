@@ -29,7 +29,10 @@ export default function IncidentsPage() {
     ]).then(([inc, mon]) => {
       setIncidents(inc)
       setMonitors(mon.map((m) => ({ id: m.id, name: m.name, status: m.status })))
-    }).catch((e) => console.error("Failed to load incidents:", e))
+    }).catch((e) => {
+      // eslint-disable-next-line no-console
+      console.error("Failed to load incidents:", e)
+    })
     .finally(() => setLoading(false))
   }, [status, limit, offset])
 

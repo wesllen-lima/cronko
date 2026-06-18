@@ -1,5 +1,3 @@
-import type { Metadata } from "next"
-import { Suspense } from "react"
 import { redirect } from "next/navigation"
 import { Sidebar } from "@/components/shared/Sidebar"
 import { NProgress } from "@/components/shared/NProgress"
@@ -24,15 +22,16 @@ export default async function AppLayout({
     const settings = await api.settings.get()
     instanceName = settings.instanceName
   } catch (e) {
-    if (!(e instanceof Error && e.message === "API 401")) console.error("Failed to load settings for sidebar:", e)
+    if (!(e instanceof Error && e.message === "API 401")) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to load settings for sidebar:", e)
+    }
   }
 
   return (
     <div className="flex h-screen">
       <a href="#main-content" className="skip-link">Skip to content</a>
-      <Suspense fallback={null}>
-        <NProgress />
-      </Suspense>
+      <NProgress />
       <Sidebar {...(instanceName !== undefined ? { instanceName } : {})} />
       <main id="main-content" className="flex-1 overflow-auto p-6">{children}</main>
     </div>

@@ -26,7 +26,10 @@ export default async function MonitorDetailPage({ params }: { params: Promise<{ 
   let incidents: Array<{ id: string; monitorId: string; status: string; startedAt: string; resolvedAt: string | null }> = []
 
   try { monitor = await api.monitors.get(id); incidents = await api.monitors.incidents(id, { limit: 20 }) } catch (e) {
-    if (!(e instanceof Error && e.message === "API 404")) console.error("Failed to load monitor:", e)
+    if (!(e instanceof Error && e.message === "API 404")) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to load monitor:", e)
+    }
   }
   if (!monitor) notFound()
 

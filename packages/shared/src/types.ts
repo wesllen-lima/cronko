@@ -1,4 +1,6 @@
-export type MonitorStatus = "healthy" | "missed" | "down" | "paused" | "pending"
+import type { MONITOR_STATUS } from "./constants"
+
+export type MonitorStatus = (typeof MONITOR_STATUS)[keyof typeof MONITOR_STATUS]
 
 export type NotificationChannelType = "discord" | "telegram" | "email" | "slack"
 

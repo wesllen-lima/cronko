@@ -12,17 +12,14 @@ auditRoute.get("/", async (c) => {
   );
   const before = c.req.query("before");
 
-  const query = db
+  const conditions = before ? lt(auditLogs.createdAt, before) : undefined;
+
+  const rows = await db
     .select()
     .from(auditLogs)
+    .where(conditions ? () => [conditions] : undefined)
     .orderBy(desc(auditLogs.createdAt))
     .limit(limit);
-
-  if (before) {
-    query.where(lt(auditLogs.createdAt, before));
-  }
-
-  const rows = await query;
 
   return c.json({
     data: rows.map((row: typeof auditLogs.$inferSelect) => ({

@@ -40,17 +40,12 @@ async function handleRefresh(): Promise<boolean> {
   return refreshPromise
 }
 
-function getCsrfToken(): string | undefined {
-  if (typeof document === "undefined") return undefined
-  const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/)
-  return match?.[1] ?? undefined
-}
-
 async function authFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const headers: Record<string, string> = {
     ...((init.headers as Record<string, string>) ?? {}),
   }
 
+  // Read auth + CSRF cookies server-side (SSR)
   if (typeof window === "undefined") {
     try {
       const { cookies } = await import("next/headers")
@@ -59,17 +54,27 @@ async function authFetch(path: string, init: RequestInit = {}): Promise<Response
       if (token) {
         headers["Authorization"] = `Bearer ${token}`
       }
+      // Also read CSRF token server-side for SSR mutations
+      const csrfToken = cookieStore.get("csrf_token")?.value
+      if (csrfToken) {
+        headers["x-csrf-token"] = csrfToken
+      }
     } catch {
       // cookies() not available in client context
     }
   }
 
-  // Attach CSRF token for mutating requests (client-side)
-  const method = (init.method ?? "GET").toUpperCase()
-  if (method !== "GET" && method !== "HEAD" && method !== "OPTIONS") {
-    const csrfToken = getCsrfToken()
-    if (csrfToken) {
-      headers["x-csrf-token"] = csrfToken
+  // Read CSRF token client-side (browser)
+  if (!headers["x-csrf-token"]) {
+    const method = (init.method ?? "GET").toUpperCase()
+    if (method !== "GET" && method !== "HEAD" && method !== "OPTIONS") {
+      if (typeof document !== "undefined") {
+        const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/)
+        const csrfToken = match?.[1]
+        if (csrfToken) {
+          headers["x-csrf-token"] = csrfToken
+        }
+      }
     }
   }
 

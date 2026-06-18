@@ -153,6 +153,18 @@ const spec = {
         responses: { "200": { description: "Monitor resumed" } },
       },
     },
+    "/api/monitors/{id}/incidents": {
+      get: {
+        summary: "Get incidents for a monitor",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string" } },
+          { name: "limit", in: "query", schema: { type: "integer", default: 50, maximum: 200 } },
+          { name: "offset", in: "query", schema: { type: "integer", default: 0 } },
+        ],
+        responses: { "200": { description: "Array of incidents" } },
+      },
+    },
     "/api/monitors/{id}/heartbeats": {
       get: {
         summary: "Get heartbeats for a monitor",
